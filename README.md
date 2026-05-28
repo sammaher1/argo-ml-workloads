@@ -55,17 +55,25 @@ Example response:
 
 ## Push This Repo First
 
-Argo CD can read public GitHub repos without extra credentials. After you push
-this repo, replace `YOUR_GITHUB_USER` in the files under `apps/`.
+This repo is intended to be private. After you push it, register the repo with
+Argo CD using a GitHub token that can read this repository.
 
 ```bash
-git init
-git add .
-git commit -m "Add Argo ML workload lab"
 git branch -M main
-git remote add origin https://github.com/YOUR_GITHUB_USER/argo-ml-workloads.git
+git remote add origin https://github.com/sammaher1/argo-ml-workloads.git
 git push -u origin main
 ```
+
+For a private repo, tell Argo CD how to authenticate before creating the
+Applications:
+
+```bash
+argocd repo add https://github.com/sammaher1/argo-ml-workloads.git \
+  --username YOUR_GITHUB_USER \
+  --password YOUR_GITHUB_TOKEN
+```
+
+Use a fine-grained GitHub token with read-only access to this repository.
 
 ## Deploy The Plain Kubernetes Version
 
@@ -195,4 +203,3 @@ Delete namespaces if you want to remove all workload resources:
 ```bash
 kubectl delete namespace ml-lab-k8s ml-lab-helm ml-lab-rollout
 ```
-
