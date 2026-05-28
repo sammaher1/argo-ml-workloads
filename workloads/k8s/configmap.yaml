@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ml-inference-script
+  labels:
+    app.kubernetes.io/name: ml-inference
+    app.kubernetes.io/part-of: argo-ml-workloads
+data:
+  server.py: |-
+    import json
+    import math
+    import os
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    MODEL_NAME = os.getenv("MODEL_NAME", "toy-churn-risk")
+    MODEL_VERSION = os.getenv("MODEL_VERSION", "0.1.0")
+    REQUESTS = 0
+    PREDICTIONS = 0
+
+
+    def sigmoid(value):
+        return 1 / (1 + math.exp(-value))
+
+
+    def predict(payload):
+        features = payload.get("features", {})
+        text = payload.get("text", "")
+
+        age = float(features.get("age", 0))
+        sessions = float(features.get("sessions", 0))
+        support_tickets = float(features.get("support_tickets", 0))
+
+        raw_score = -2.0 + (age * 0.01) - (sessions * 0.12) + (support_tickets * 0.55) + (len(text) * 0.002)
+        score = sigmoid(raw_score)
+
+        return {
+            "model": MODEL_NAME,
+            "version": MODEL_VERSION,
+            "score": round(score, 4),
+            "label": "high_risk" if score >= 0.5 else "low_risk",
+        }
+
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, fmt, *args):
+            return
+
+        def send_json(self, status, body):
+            encoded = json.dumps(body, indent=2).encode("utf-8")
+            self.send_response(status)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(encoded)))
+            self.end_headers()
+            self.wfile.write(encoded)
+
+        def do_GET(self):
+            global REQUESTS
+            REQUESTS += 1
+
+            if self.path == "/healthz":
+                self.send_json(200, {"status": "ok"})
+                return
+
+            if self.path == "/model":
+                self.send_json(200, {"model": MODEL_NAME, "version": MODEL_VERSION})
+                return
+
+            if self.path == "/metrics":
+                body = (
+                    "# HELP inference_requests_total HTTP requests handled by the toy model\n"
+                    "# TYPE inference_requests_total counter\n"
+                    f"inference_requests_total {REQUESTS}\n"
+                    "# HELP inference_predictions_total Prediction requests handled by the toy model\n"
+                    "# TYPE inference_predictions_total counter\n"
+                    f"inference_predictions_total {PREDICTIONS}\n"
+                ).encode("utf-8")
+                self.send_response(200)
+                self.send_header("content-type", "text/plain; version=0.0.4")
+                self.send_header("content-length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+
+            self.send_json(404, {"error": "not found"})
+
+        def do_POST(self):
+            global REQUESTS, PREDICTIONS
+            REQUESTS += 1
+
+            if self.path != "/predict":
+                self.send_json(404, {"error": "not found"})
+                return
+
+            length = int(self.headers.get("content-length", "0"))
+            raw_body = self.rfile.read(length)
+
+            try:
+                payload = json.loads(raw_body or b"{}")
+            except json.JSONDecodeError:
+                self.send_json(400, {"error": "invalid json"})
+                return
+
+            PREDICTIONS += 1
+            self.send_json(200, predict(payload))
+
+
+    if __name__ == "__main__":
+        server = HTTPServer(("0.0.0.0", 8080), Handler)
+        server.serve_forever()
+

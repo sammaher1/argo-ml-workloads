@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ml-inference-helm
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_GITHUB_USER/argo-ml-workloads.git
+    targetRevision: main
+    path: workloads/helm/ml-inference
+    helm:
+      releaseName: ml-inference
+      values: |
+        replicaCount: 2
+        model:
+          name: toy-churn-risk
+          version: 0.1.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ml-lab-helm
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+

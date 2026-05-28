@@ -1,0 +1,23 @@
+replicaCount: 2
+
+image:
+  repository: python
+  tag: 3.12-slim
+  pullPolicy: IfNotPresent
+
+model:
+  name: toy-churn-risk
+  version: 0.1.0
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
