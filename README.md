@@ -15,8 +15,13 @@ apps/
   plain-k8s.yaml          Argo CD Application for raw Kubernetes YAML
   helm.yaml               Argo CD Application for the Helm chart
   rollout.yaml            Argo CD Application for Argo Rollouts
+  kustomize/dev.yaml      Dev cluster app using Kustomize overlays
+  kustomize/prod.yaml     Prod cluster app using Kustomize overlays
+  helm/dev.yaml           Dev cluster app using Helm values
+  helm/prod.yaml          Prod cluster app using Helm values
 workloads/
   k8s/                    Plain Kubernetes Deployment + Service + ConfigMap
+  kustomize/              Kustomize base plus dev/prod overlays
   helm/ml-inference/      Helm chart for the same service
   rollouts/               Argo Rollouts blue-green version
 scripts/
@@ -61,6 +66,114 @@ This repo is public, so Argo CD can read it without GitHub credentials.
 git branch -M main
 git remote add origin https://github.com/sammaher1/argo-ml-workloads.git
 git push -u origin main
+```
+
+## Two Local Clusters
+
+For multi-cluster practice, use the cluster already running Argo CD as `dev`
+and create a second Kind cluster as `prod`.
+
+```bash
+kind create cluster --name argo-prod
+```
+
+Register the prod cluster with Argo CD. The `--name prod` part is important
+because the prod Argo CD Applications in this repo use `destination.name: prod`.
+
+```bash
+argocd cluster add kind-argo-prod --name prod
+```
+
+After that, the shape is:
+
+```text
+dev Kind cluster:
+  runs Argo CD
+  receives dev workloads through https://kubernetes.default.svc
+
+prod Kind cluster:
+  receives prod workloads through the registered Argo CD cluster named prod
+```
+
+## Dev/Prod With Kustomize
+
+Kustomize starts with normal Kubernetes YAML in a base and applies structured
+patches for each environment.
+
+```text
+workloads/kustomize/base/
+  deployment.yaml
+  service.yaml
+  server.py
+  kustomization.yaml
+
+workloads/kustomize/overlays/dev/
+  kustomization.yaml
+  deployment-patch.yaml
+
+workloads/kustomize/overlays/prod/
+  kustomization.yaml
+  deployment-patch.yaml
+```
+
+Render locally without applying:
+
+```bash
+kubectl kustomize workloads/kustomize/overlays/dev
+kubectl kustomize workloads/kustomize/overlays/prod
+```
+
+The dev overlay changes the base to:
+
+```text
+replicas: 1
+MODEL_VERSION: 0.2.0-dev
+ENVIRONMENT: dev
+smaller CPU/memory limits
+```
+
+The prod overlay changes the same base to:
+
+```text
+replicas: 3
+MODEL_VERSION: 1.0.0
+ENVIRONMENT: prod
+larger CPU/memory limits
+```
+
+Apply the Argo CD Applications:
+
+```bash
+kubectl apply -n argocd -f apps/kustomize/dev.yaml
+kubectl apply -n argocd -f apps/kustomize/prod.yaml
+```
+
+## Dev/Prod With Helm
+
+Helm starts with templates and fills them using values files.
+
+```text
+workloads/helm/ml-inference/
+  Chart.yaml
+  values.yaml
+  values-dev.yaml
+  values-prod.yaml
+  templates/
+```
+
+Render locally without applying:
+
+```bash
+helm template ml-inference workloads/helm/ml-inference -f workloads/helm/ml-inference/values-dev.yaml
+helm template ml-inference workloads/helm/ml-inference -f workloads/helm/ml-inference/values-prod.yaml
+```
+
+The dev and prod Helm apps point at the same chart path, but use different
+values files:
+
+```bash
+kubectl apply -n argocd -f apps/helm/dev.yaml
+kubectl apply -n argocd -f apps/helm/prod.yaml
 ```
 
 ## Deploy The Plain Kubernetes Version

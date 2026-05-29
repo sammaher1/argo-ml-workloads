@@ -4,7 +4,7 @@ import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 MODEL_NAME = os.getenv("MODEL_NAME", "toy-churn-risk")
-MODEL_VERSION = os.getenv("MODEL_VERSION", "0.1.0")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "base")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "unknown")
 REQUESTS = 0
 PREDICTIONS = 0
@@ -100,3 +100,4 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     server = HTTPServer(("0.0.0.0", 8080), Handler)
     server.serve_forever()
+

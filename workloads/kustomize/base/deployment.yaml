@@ -1,24 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "ml-inference.fullname" . }}
+  name: ml-inference
   labels:
-    {{- include "ml-inference.labels" . | nindent 4 }}
+    app.kubernetes.io/name: ml-inference
+    app.kubernetes.io/part-of: argo-ml-workloads
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
   selector:
     matchLabels:
-      {{- include "ml-inference.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/name: ml-inference
   template:
     metadata:
       labels:
-        {{- include "ml-inference.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/name: ml-inference
         app.kubernetes.io/part-of: argo-ml-workloads
     spec:
       containers:
         - name: api
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: python:3.12-slim
+          imagePullPolicy: IfNotPresent
           command:
             - python
             - /app/server.py
@@ -27,11 +28,11 @@ spec:
               containerPort: 8080
           env:
             - name: MODEL_NAME
-              value: {{ .Values.model.name | quote }}
+              value: toy-churn-risk
             - name: MODEL_VERSION
-              value: {{ .Values.model.version | quote }}
+              value: base
             - name: ENVIRONMENT
-              value: {{ .Values.environment | quote }}
+              value: base
           readinessProbe:
             httpGet:
               path: /healthz
@@ -45,7 +46,12 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
           volumeMounts:
             - name: script
               mountPath: /app
@@ -53,4 +59,5 @@ spec:
       volumes:
         - name: script
           configMap:
-            name: {{ include "ml-inference.fullname" . }}-script
+            name: ml-inference-script
+

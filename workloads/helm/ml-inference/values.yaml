@@ -9,6 +9,8 @@ model:
   name: toy-churn-risk
   version: 0.1.0
 
+environment: base
+
 service:
   type: ClusterIP
   port: 80
@@ -20,4 +22,3 @@ resources:
   limits:
     cpu: 250m
     memory: 256Mi
-

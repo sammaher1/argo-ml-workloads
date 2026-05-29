@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-inference
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: api
+          env:
+            - name: MODEL_NAME
+              value: toy-churn-risk
+            - name: MODEL_VERSION
+              value: 1.0.0
+            - name: ENVIRONMENT
+              value: prod
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+

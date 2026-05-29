@@ -1,0 +1,16 @@
+replicaCount: 1
+
+model:
+  name: toy-churn-risk
+  version: 0.2.0-dev
+
+environment: dev
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+

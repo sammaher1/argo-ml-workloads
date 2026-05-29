@@ -22,10 +22,10 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/part-of: argo-ml-workloads
+environment: {{ .Values.environment | quote }}
 {{- end -}}
 
 {{- define "ml-inference.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "ml-inference.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
-
