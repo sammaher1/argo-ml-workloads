@@ -55,25 +55,13 @@ Example response:
 
 ## Push This Repo First
 
-This repo is intended to be private. After you push it, register the repo with
-Argo CD using a GitHub token that can read this repository.
+This repo is public, so Argo CD can read it without GitHub credentials.
 
 ```bash
 git branch -M main
 git remote add origin https://github.com/sammaher1/argo-ml-workloads.git
 git push -u origin main
 ```
-
-For a private repo, tell Argo CD how to authenticate before creating the
-Applications:
-
-```bash
-argocd repo add https://github.com/sammaher1/argo-ml-workloads.git \
-  --username YOUR_GITHUB_USER \
-  --password YOUR_GITHUB_TOKEN
-```
-
-Use a fine-grained GitHub token with read-only access to this repository.
 
 ## Deploy The Plain Kubernetes Version
 
